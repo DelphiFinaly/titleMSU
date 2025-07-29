@@ -36,6 +36,11 @@ export default function ExportWeekToWord({ schedule, selectedDate }) {
   function handleExport() {
     // Массив дат с понедельника по субботу
     const monday = getMonday(selectedDate);
+    const saturday = new Date(monday);
+    saturday.setDate(monday.getDate() + 5);
+
+    const mondayStr = monday.toISOString().slice(0, 10);     // например, "2025-07-22"
+    const saturdayStr = saturday.toISOString().slice(0, 10); // например, "2025-07-27"
     const weekDates = Array.from({ length: 6 }, (_, i) => {
       const date = new Date(monday);
       date.setDate(monday.getDate() + i);
@@ -254,7 +259,7 @@ export default function ExportWeekToWord({ schedule, selectedDate }) {
     });
 
     Packer.toBlob(doc).then(blob => {
-      saveAs(blob, `Расписание_недели.docx`);
+      saveAs(blob, `Расписание_${mondayStr}_по_${saturdayStr}.docx`);
     });
   }
 
