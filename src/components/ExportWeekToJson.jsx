@@ -10,6 +10,13 @@ function getMonday(date) {
 export default function ExportWeekToJson({ schedule, selectedDate }) {
   function handleExport() {
     const monday = getMonday(selectedDate);
+    const saturday = new Date(monday);
+    saturday.setDate(monday.getDate() + 5);
+
+    // Строки для файла (например: 2025-07-22)
+    const mondayStr = monday.toISOString().slice(0, 10);
+    const saturdayStr = saturday.toISOString().slice(0, 10);
+
     const weekDates = Array.from({ length: 6 }, (_, i) => {
       const date = new Date(monday);
       date.setDate(monday.getDate() + i);
@@ -26,7 +33,7 @@ export default function ExportWeekToJson({ schedule, selectedDate }) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "schedule_week.json";
+    link.download = `schedule_${mondayStr}_по_${saturdayStr}.json`;  // ← Динамическое имя!
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
