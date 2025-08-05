@@ -1,3 +1,4 @@
+// App.jsx
 import React, { useState } from "react";
 import ExcelUpload from "./components/ExcelUpload";
 import ScheduleForm from "./components/ScheduleForm";
@@ -18,94 +19,111 @@ function getMonday(d) {
 }
 
 export default function App() {
+  // Данные из загруженного Excel
   const [excelData, setExcelData] = useState({ lessons: [], teachers: [], rooms: [] });
   const [schedule, setSchedule] = useState({});
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [activeDayIdx, setActiveDayIdx] = useState(0);
+  // Состояние выбранного курса (1 или 2)
+  const [selectedCourse, setSelectedCourse] = useState(1);
 
-  // Для слайдера дней недели
-  const [activeDayIdx, setActiveDayIdx] = useState(0); // 0 - понедельник
-
-  // Находим понедельник текущей недели для выбранной даты
+  // Вычисляем понедельник и массив дат недели
   const monday = getMonday(selectedDate);
-
-  // Массив дат с понедельника по субботу
   const weekDates = Array.from({ length: 6 }, (_, i) => {
     const date = new Date(monday);
     date.setDate(monday.getDate() + i);
     return date;
   });
 
-  // Обновить дату и выбранный день при выборе дня недели на слайдере
+  // Вычисляем суффикс курса (125 или 224) и формируем список групп
+  const courseSuffix = selectedCourse === 1 ? "125" : "224";
+  const GROUPS = ["ВМ", "СКТ", "ТФ", "ЯФФ", "ЛНОФ"].map(
+    (prefix) => `${prefix}-${courseSuffix}`
+  );
+
+  // Обработчик слайдера дней
   function handleSliderChange(idx) {
     setActiveDayIdx(idx);
     setSelectedDate(weekDates[idx]);
   }
 
-  // Добавление расписания по форме
+  // Добавление записи в расписание
   function handleAddToSchedule({ date, group, pairNum, lesson, teacher, room, online }) {
-  const dateKey = new Date(date).toISOString().slice(0,10);
-  setSchedule(prev => ({
-    ...prev,
-    [dateKey]: {
-      ...(prev[dateKey] || {}),
-      [group]: {
-        ...(prev[dateKey]?.[group] || {}),
-        [pairNum]: { lesson, teacher, room, online }
-      }
-    }
-  }));
-}
-
+    const dateKey = new Date(date).toISOString().slice(0, 10);
+    setSchedule((prev) => ({
+      ...prev,
+      [dateKey]: {
+        ...(prev[dateKey] || {}),
+        [group]: {
+          ...(prev[dateKey]?.[group] || {}),
+          [pairNum]: { lesson, teacher, room, online },
+        },
+      },
+    }));
+  }
 
   return (
-    <div style={{display:"flex", minHeight: "100vh"}}>
+    <div style={{ display: "flex", minHeight: "100vh" }}>
       {/* Левая панель */}
       <div className="left-panel">
         <h2>Table MSU</h2>
         <ExcelUpload setExcelData={setExcelData} />
-        <label style={{marginTop: 18, fontWeight: "bold"}}>Календарь даты:
+
+        <label style={{ marginTop: 18, fontWeight: "bold", display: "block" }}>
+          Календарь даты:
           <input
             type="date"
-            value={selectedDate.toISOString().slice(0,10)}
-            onChange={e => {
-              setSelectedDate(new Date(e.target.value));
-              // Пересчитать активный день слайдера
-              const monday = getMonday(new Date(e.target.value));
-              const d = new Date(e.target.value);
-              const idx = Math.max(0, Math.min(5, Math.floor((d - monday) / (1000*60*60*24))));
+            value={selectedDate.toISOString().slice(0, 10)}
+            onChange={(e) => {
+              const newDate = new Date(e.target.value);
+              setSelectedDate(newDate);
+              const newMonday = getMonday(newDate);
+              const idx = Math.max(
+                0,
+                Math.min(
+                  5,
+                  Math.floor((newDate - newMonday) / (1000 * 60 * 60 * 24))
+                )
+              );
               setActiveDayIdx(idx);
             }}
-            style={{marginLeft: 8}}
+            style={{ marginLeft: 8 }}
           />
         </label>
+
+        {/* Выпадающий список выбора курса */}
+        <label style={{ marginTop: 18, fontWeight: "bold", display: "block" }}>
+          Курс:
+          <select
+            value={selectedCourse}
+            onChange={(e) => setSelectedCourse(Number(e.target.value))}
+            style={{ marginLeft: 8 }}
+          >
+            <option value={1}>1 курс</option>
+            <option value={2}>2 курс</option>
+          </select>
+        </label>
+
         <ScheduleForm
           lessons={excelData.lessons}
           teachers={excelData.teachers}
           rooms={excelData.rooms}
           date={selectedDate}
           onAdd={handleAddToSchedule}
+          groups={GROUPS}
         />
-        <ExportToWord
-          schedule={schedule}
-          date={selectedDate}
-        />
-        <ExportToJson
-          schedule={schedule}
-          date={selectedDate}
-        />
-        <ExportWeekToWord
-          schedule={schedule}
-          selectedDate={selectedDate}
-        />
-        <ExportWeekToJson
-          schedule={schedule}
-          selectedDate={selectedDate}
-        />
-        <ImportWeekFromJson setSchedule={setSchedule} 
-        />
+
+        {/* Передаем динамические группы в компоненты экспорта */}
+        <ExportToWord groups={GROUPS} schedule={schedule} date={selectedDate} />
+        <ExportWeekToWord groups={GROUPS} schedule={schedule} selectedDate={selectedDate} />
+
+        <ExportToJson groups={GROUPS} schedule={schedule} date={selectedDate} />
+        <ExportWeekToJson groups={GROUPS} schedule={schedule} selectedDate={selectedDate} />
+        <ImportWeekFromJson setSchedule={setSchedule} />
       </div>
-      {/* Правая часть: Слайдер и расписание */}
-      <div style={{flex:1, padding:"32px", overflowY:"auto", background: "#fff"}}>
+
+      {/* Правая часть: слайдер и таблица */}
+      <div style={{ flex: 1, padding: "32px", overflowY: "auto", background: "#fff" }}>
         <SliderDays
           weekDates={weekDates}
           activeIdx={activeDayIdx}
@@ -114,7 +132,8 @@ export default function App() {
         <div id="print-area">
           <ScheduleTable
             date={weekDates[activeDayIdx]}
-            schedule={schedule[weekDates[activeDayIdx].toISOString().slice(0,10)] || {}}
+            schedule={schedule[weekDates[activeDayIdx].toISOString().slice(0, 10)] || {}}
+            groups={GROUPS}
           />
         </div>
       </div>
