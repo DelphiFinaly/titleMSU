@@ -1,46 +1,46 @@
+// ExportWeekToJson.jsx
 import React from "react";
 
 function getMonday(date) {
   const d = new Date(date);
   const day = d.getDay() === 0 ? 7 : d.getDay();
-  d.setDate(d.getDate() - (day - 1));
+  if (day !== 1) d.setDate(d.getDate() - (day - 1));
   return d;
 }
 
-export default function ExportWeekToJson({ schedule, selectedDate }) {
+export default function ExportWeekToJson({ schedule, selectedDate, groups }) {
   function handleExport() {
     const monday = getMonday(selectedDate);
-    const saturday = new Date(monday);
-    saturday.setDate(monday.getDate() + 5);
-
-    // Строки для файла (например: 2025-07-22)
-    const mondayStr = monday.toISOString().slice(0, 10);
-    const saturdayStr = saturday.toISOString().slice(0, 10);
-
     const weekDates = Array.from({ length: 6 }, (_, i) => {
-      const date = new Date(monday);
-      date.setDate(monday.getDate() + i);
-      return date.toISOString().slice(0, 10);
+      const dt = new Date(monday);
+      dt.setDate(monday.getDate() + i);
+      return dt.toISOString().slice(0, 10);
     });
 
-    const weekSchedule = {};
-    weekDates.forEach((dateKey) => {
-      if (schedule[dateKey]) weekSchedule[dateKey] = schedule[dateKey];
-    });
+    // Собираем данные недели по выбранным группам
+    const weekData = weekDates.reduce((acc, dateKey) => {
+      const rowsObj = schedule[dateKey] || {};
+      acc[dateKey] = groups.reduce((grpAcc, group) => {
+        grpAcc[group] = rowsObj[group] || {};
+        return grpAcc;
+      }, {});
+      return acc;
+    }, {});
 
-    const json = JSON.stringify(weekSchedule, null, 2);
+    const json = JSON.stringify(weekData, null, 2);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `schedule_${mondayStr}_по_${saturdayStr}.json`;  // ← Динамическое имя!
+    link.download = "schedule_week.json";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }
+
   return (
-    <button className="export-btn" style={{ marginTop: 12 }} onClick={handleExport}>
+    <button type="button" className="export-btn" style={{ marginTop: 12 }} onClick={handleExport}>
       Экспорт JSON (неделя)
     </button>
   );
