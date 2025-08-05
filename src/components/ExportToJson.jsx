@@ -1,9 +1,17 @@
+// ExportToJson.jsx
 import React from "react";
 
-export default function ExportToJson({ schedule, date }) {
+export default function ExportToJson({ schedule, date, groups }) {
   function handleExport() {
     const dateKey = new Date(date).toISOString().slice(0, 10);
-    const json = JSON.stringify({ [dateKey]: schedule[dateKey] }, null, 2);
+    // Фильтруем расписание по выбранным группам
+    const rowsObj = schedule[dateKey] || {};
+    const filtered = groups.reduce((acc, group) => {
+      acc[group] = rowsObj[group] || {};
+      return acc;
+    }, {});
+    const jsonData = { [dateKey]: filtered };
+    const json = JSON.stringify(jsonData, null, 2);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -14,8 +22,9 @@ export default function ExportToJson({ schedule, date }) {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }
+
   return (
-    <button className="export-btn" style={{ marginTop: 12 }} onClick={handleExport}>
+    <button type="button" className="export-btn" onClick={handleExport}>
       Экспорт JSON (день)
     </button>
   );
