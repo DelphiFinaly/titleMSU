@@ -1,6 +1,7 @@
+// ImportWeekFromJson.jsx
 import React from "react";
 
-export default function ImportWeekFromJson({ setSchedule }) {
+export default function ImportWeekFromJson({ setSchedule, groups }) {
   function handleImport() {
     const input = document.createElement("input");
     input.type = "file";
@@ -12,9 +13,20 @@ export default function ImportWeekFromJson({ setSchedule }) {
       reader.onload = (evt) => {
         try {
           const data = JSON.parse(evt.target.result);
-          setSchedule(prev => ({ ...prev, ...data }));
+          // Фильтруем только нужные группы из импортированных данных
+          const filteredData = {};
+          for (const [dateKey, groupData] of Object.entries(data)) {
+            filteredData[dateKey] = {};
+            for (const group of groups) {
+              if (groupData[group]) {
+                filteredData[dateKey][group] = groupData[group];
+              }
+            }
+          }
+          setSchedule((prev) => ({ ...prev, ...filteredData }));
           alert("Расписание за неделю успешно загружено!");
         } catch (err) {
+          console.error(err);
           alert("Ошибка при чтении файла расписания.");
         }
       };
@@ -22,8 +34,14 @@ export default function ImportWeekFromJson({ setSchedule }) {
     };
     input.click();
   }
+
   return (
-    <button className="export-btn" style={{ marginTop: 12 }} onClick={handleImport}>
+    <button
+      type="button"
+      className="export-btn"
+      style={{ marginTop: 12 }}
+      onClick={handleImport}
+    >
       Импорт JSON (неделя)
     </button>
   );
